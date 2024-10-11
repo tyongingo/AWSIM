@@ -44,12 +44,16 @@ namespace AWSIM
                 AccelerationInput = 0;
 
             // Get steering input.
+            float targetSteeringInput = 0;
             if (Input.GetKey(KeyCode.LeftArrow))
-                SteeringInput = MaxSteerAngle * -1;
+                targetSteeringInput = MaxSteerAngle * -1;
             else if (Input.GetKey(KeyCode.RightArrow))
-                SteeringInput = MaxSteerAngle;
+                targetSteeringInput = MaxSteerAngle;
             else
-                SteeringInput = 0;
+                targetSteeringInput = 0;
+
+            // Smooth steering input.
+            SteeringInput = Mathf.Lerp(SteeringInput, targetSteeringInput, Time.deltaTime * 3);
 
             // Get gear input.
             if (Input.GetKey(KeyCode.D))
