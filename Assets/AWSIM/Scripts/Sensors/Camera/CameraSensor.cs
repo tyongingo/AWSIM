@@ -297,7 +297,9 @@ namespace AWSIM
                     return;
                 }
                 request.GetData<byte>().CopyTo(outputData.imageDataBuffer);
+                multiCameraHolder.renderedCount++;
                 multiCameraHolder.shadedCount++;
+                Debug.Log("Rendered");
                 Debug.Log("Shaded");
             }
 
@@ -367,7 +369,6 @@ namespace AWSIM
 
                 // コルーチンの開始
                 StartCoroutine(UpdateRequest(shaderRequest));
-                //Thread.Sleep(50);
             }
             else
             {
@@ -459,7 +460,9 @@ namespace AWSIM
                     return;
                 }
                 request.GetData<byte>().CopyTo(outputData.imageDataBuffer);
+                multiCameraHolder.renderedCount++;
                 multiCameraHolder.shadedCount++;
+                Debug.Log("Rendered");
                 Debug.Log("Shaded");
 
                 // Call registered callback.

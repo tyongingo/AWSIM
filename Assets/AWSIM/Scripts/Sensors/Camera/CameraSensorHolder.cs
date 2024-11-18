@@ -69,6 +69,55 @@ namespace AWSIM
         private void Start()
         {   
             Debug.Log("Rendering Threading Mode: " + SystemInfo.renderingThreadingMode);
+
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; ++i)
+            {
+                switch (args[i])
+                {
+                    case "-mode":
+                        int mode = 0;
+                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out mode))
+                        {
+                            switch (mode)
+                            {
+                                case 0:
+                                    renderInQueue = true;
+                                    processType = 0;
+                                    break;
+                                case 1:
+                                    renderInQueue = true;
+                                    processType = 1;
+                                    break;
+                                case 2:
+                                    renderInQueue = true;
+                                    processType = 2;
+                                    break;
+                                case 3:
+                                    renderInQueue = true;
+                                    processType = 3;
+                                    break;
+                                case 4:
+                                    renderInQueue = true;
+                                    processType = 4;
+                                    break;
+                                case 5:
+                                    renderInQueue = false;
+                                    processType = 0;
+                                    break;
+                                case 6:
+                                    renderInQueue = false;
+                                    processType = 1;
+                                    break;
+                                case 7:
+                                    renderInQueue = true;
+                                    processType = 0;
+                                    break;
+                            }
+                        }
+                        break;
+                }
+            }
         }
 
         private void FixedUpdate()
@@ -110,8 +159,6 @@ namespace AWSIM
                       "ShaderRequestedCount : " + shaderRequestedCount + "   " +
                       "ShadedCount : " + shadedCount + "   " +
                       "PublishedCount : " + publishedCount);
-
-            //Thread.Sleep(200);
         }
 
         private void LateUpdate()
@@ -138,8 +185,6 @@ namespace AWSIM
                       "ShaderRequestedCount : " + shaderRequestedCount + "   " +
                       "ShadedCount : " + shadedCount + "   " +
                       "PublishedCount : " + publishedCount);
-
-            //Thread.Sleep(100);
         }
 
         private IEnumerator FixedUpdateRoutine()
@@ -284,9 +329,11 @@ namespace AWSIM
                             break;
                         
                         case 5:
+                            // To Do : implement Job System
                             break;
                         
                         case 6:
+                            // To Do : enable to use camera.Render() in other main thread
                             renderTasks = new List<Task>();
                             for (int i = 0; i < cameraSensors.Count; i++)
                             {
@@ -295,6 +342,7 @@ namespace AWSIM
                             break;
                         
                         case 7:
+                            // To Do : enable to use camera.Render() in other main thread
                             // Parallel.Forを使用して並列にレンダリング
                             Parallel.For(0, cameraSensors.Count, i =>
                             {

@@ -108,7 +108,28 @@ namespace RGLUnityPlugin
         private static List<LidarSensor> activeSensors = new List<LidarSensor>();
 
         public void Awake()
-        {
+        {   
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; ++i)
+            {
+                switch (args[i])
+                {
+                    case "-disable_lidar":
+                        int disable_lidar = 0;
+                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out disable_lidar))
+                        {
+                            if (disable_lidar == 1)
+                            {
+                                gameObject.SetActive(false);
+                            }else
+                            {
+                                gameObject.SetActive(true);
+                            }
+                        }
+                        break;
+                }
+            }
+
             rglGraphLidar = new RGLNodeSequence()
                 .AddNodeRaysFromMat3x4f(lidarRaysNodeId, new Matrix4x4[1] { Matrix4x4.identity })
                 .AddNodeRaysSetRange(lidarRangeNodeId, new Vector2[1] { new Vector2(0.0f, Mathf.Infinity) })
