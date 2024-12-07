@@ -124,7 +124,7 @@ namespace AWSIM
             /// </summary>
             public bool show = true;
 
-            [Range(1, 50)] public uint scale = 1;
+            [Range(1, 50)] public float scale = 1;
 
             [Range(0, 2048)] public uint xAxis = 0;
             [Range(0, 2048)] public uint yAxis = 0;
@@ -193,12 +193,27 @@ namespace AWSIM
 
         private int bytesPerPixel = 3;
 
-        private CameraSensorHolder multiCameraHolder;
-
         private CommandBuffer cmd;
 
         void Start()
-        {
+        {   
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; ++i)
+            {
+                switch (args[i])
+                {
+                    case "-height":
+                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int height))
+                        {
+                            int width = (int)(height * 16 / 9);
+                            cameraParameters.width = width;
+                            cameraParameters.height = height;
+                            imageOnGui.scale *= (float)height / 1080;
+                        }
+                        break;
+                }
+            }
+
             if (cameraObject == null)
             {
                 throw new MissingComponentException("No active Camera component found in GameObject.");
@@ -247,8 +262,6 @@ namespace AWSIM
             sharpenShaderGroupSizeX = ((sharpenRenderTexture.width + (int)sharpenShaderThreadsPerGroupX - 1) / (int)sharpenShaderThreadsPerGroupX);
             sharpenShaderGroupSizeY = ((sharpenRenderTexture.height + (int)sharpenShaderthreadsPerGroupY - 1) / (int)sharpenShaderthreadsPerGroupY);
 
-            multiCameraHolder = GetComponentInParent<CameraSensorHolder>();
-
             // コマンドバッファの初期化
             cmd = new CommandBuffer();
             cmd.name = "Render and Execute Shaders";
@@ -259,7 +272,7 @@ namespace AWSIM
             // Render Unity Camera
             Profiler.BeginSample("Render Unity Camera");
             cameraObject.Render();
-            multiCameraHolder.renderRequestedCount++;
+            CameraSensorHolder.renderRequestedCount++;
             Profiler.EndSample();
 
             // Set data to shader
@@ -281,11 +294,11 @@ namespace AWSIM
             }
             rosImageShader.SetBuffer(rosShaderKernelIdx, "_RosImageBuffer", computeBuffer);
             rosImageShader.Dispatch(rosShaderKernelIdx, rosImageShaderGroupSizeX, 1, 1);
-            multiCameraHolder.setShaderCount++;
+            CameraSensorHolder.setShaderCount++;
 
             // Get data from shader
             AsyncGPUReadback.Request(computeBuffer, OnGPUReadbackRequest);
-            multiCameraHolder.shaderRequestedCount++;
+            CameraSensorHolder.shaderRequestedCount++;
             Profiler.EndSample();
 
             // Callback called once the AsyncGPUReadback request is fullfield.
@@ -297,8 +310,8 @@ namespace AWSIM
                     return;
                 }
                 request.GetData<byte>().CopyTo(outputData.imageDataBuffer);
-                multiCameraHolder.renderedCount++;
-                multiCameraHolder.shadedCount++;
+                CameraSensorHolder.renderedCount++;
+                CameraSensorHolder.shadedCount++;
                 Debug.Log("Rendered");
                 Debug.Log("Shaded");
             }
@@ -309,7 +322,7 @@ namespace AWSIM
             // Call registered callback.
             Profiler.BeginSample("ROS2 Publish");
             OnOutputData.Invoke(outputData);
-            multiCameraHolder.publishedCount++;
+            CameraSensorHolder.publishedCount++;
             Profiler.EndSample();
         }
 
@@ -323,7 +336,7 @@ namespace AWSIM
                 // Unityカメラのレンダリング
                 cmd.BeginSample("Render Unity Camera");
                 cameraObject.Render();
-                multiCameraHolder.renderRequestedCount++;
+                CameraSensorHolder.renderRequestedCount++;
                 cmd.EndSample("Render Unity Camera");
 
                 // シャープシェーダの実行
@@ -356,7 +369,7 @@ namespace AWSIM
                 }
                 cmd.SetComputeBufferParam(rosImageShader, rosShaderKernelIdx, "_RosImageBuffer", computeBuffer);
                 cmd.DispatchCompute(rosImageShader, rosShaderKernelIdx, rosImageShaderGroupSizeX, 1, 1);
-                multiCameraHolder.setShaderCount++;
+                CameraSensorHolder.setShaderCount++;
                 cmd.EndSample("Execute ROS Image Shader");
 
                 // シェーダのデータ取得
@@ -375,7 +388,7 @@ namespace AWSIM
                 // Render Unity Camera
                 Profiler.BeginSample("Render Unity Camera");
                 cameraObject.Render();
-                multiCameraHolder.renderRequestedCount++;
+                CameraSensorHolder.renderRequestedCount++;
                 //var renderRequest = AsyncGPUReadback.Request(targetRenderTexture, 0, TextureFormat.ARGB32, OnGPUReadbackRequest_Render);
                 Profiler.EndSample();
                 //StartCoroutine(UpdateRequest(renderRequest));
@@ -409,12 +422,12 @@ namespace AWSIM
                 }
                 rosImageShader.SetBuffer(rosShaderKernelIdx, "_RosImageBuffer", computeBuffer);
                 rosImageShader.Dispatch(rosShaderKernelIdx, rosImageShaderGroupSizeX, 1, 1);
-                multiCameraHolder.setShaderCount++;
+                CameraSensorHolder.setShaderCount++;
 
                 // Get data from shader
                 var shaderRequest = AsyncGPUReadback.Request(computeBuffer, OnGPUReadbackRequest_Shader);
                 GL.Flush();
-                multiCameraHolder.shaderRequestedCount++;
+                CameraSensorHolder.shaderRequestedCount++;
                 Profiler.EndSample();
                 StartCoroutine(UpdateRequest(shaderRequest));
                 //Thread.Sleep(35);
@@ -428,7 +441,7 @@ namespace AWSIM
                     Debug.LogWarning("AsyncGPUReadback error");
                     return;
                 }
-                multiCameraHolder.renderedCount++;
+                CameraSensorHolder.renderedCount++;
                 Debug.Log("Rendered");
             }
 
@@ -460,15 +473,15 @@ namespace AWSIM
                     return;
                 }
                 request.GetData<byte>().CopyTo(outputData.imageDataBuffer);
-                multiCameraHolder.renderedCount++;
-                multiCameraHolder.shadedCount++;
+                CameraSensorHolder.renderedCount++;
+                CameraSensorHolder.shadedCount++;
                 Debug.Log("Rendered");
                 Debug.Log("Shaded");
 
                 // Call registered callback.
                 Profiler.BeginSample("ROS2 Publish");
                 OnOutputData.Invoke(outputData);
-                multiCameraHolder.publishedCount++;
+                CameraSensorHolder.publishedCount++;
                 Profiler.EndSample();
             }
 
@@ -481,7 +494,7 @@ namespace AWSIM
             // Render Unity Camera
             Profiler.BeginSample("Render Unity Camera");
             cameraObject.Render();
-            multiCameraHolder.renderRequestedCount++;
+            CameraSensorHolder.renderRequestedCount++;
             //var renderRequest = AsyncGPUReadback.Request(targetRenderTexture, 0, TextureFormat.ARGB32, OnGPUReadbackRequest_Render);
             Profiler.EndSample();
             //StartCoroutine(UpdateRequest(renderRequest));
@@ -516,12 +529,12 @@ namespace AWSIM
             }
             rosImageShader.SetBuffer(rosShaderKernelIdx, "_RosImageBuffer", computeBuffer);
             rosImageShader.Dispatch(rosShaderKernelIdx, rosImageShaderGroupSizeX, 1, 1);
-            multiCameraHolder.setShaderCount++;
+            CameraSensorHolder.setShaderCount++;
 
             // Get data from shader
             var shaderRequest = AsyncGPUReadback.Request(computeBuffer, OnGPUReadbackRequest_Shader);
             //GL.Flush();
-            multiCameraHolder.shaderRequestedCount++;
+            CameraSensorHolder.shaderRequestedCount++;
             Profiler.EndSample();
             //StartCoroutine(UpdateRequest(shaderRequest));
             //yield return StartCoroutine(UpdateRequest(shaderRequest));
@@ -534,7 +547,7 @@ namespace AWSIM
                     Debug.LogWarning("AsyncGPUReadback error");
                     return;
                 }
-                multiCameraHolder.renderedCount++;
+                CameraSensorHolder.renderedCount++;
                 Debug.Log("Rendered");
             }
 
@@ -566,7 +579,7 @@ namespace AWSIM
                     return;
                 }
                 request.GetData<byte>().CopyTo(outputData.imageDataBuffer);
-                multiCameraHolder.shadedCount++;
+                CameraSensorHolder.shadedCount++;
                 Debug.Log("Shaded");
             }
 
@@ -576,7 +589,7 @@ namespace AWSIM
             // Call registered callback.
             Profiler.BeginSample("ROS2 Publish");
             OnOutputData.Invoke(outputData);
-            multiCameraHolder.publishedCount++;
+            CameraSensorHolder.publishedCount++;
             Profiler.EndSample();
 
             yield return null;

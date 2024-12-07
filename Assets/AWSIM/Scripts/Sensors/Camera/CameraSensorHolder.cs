@@ -48,12 +48,12 @@ namespace AWSIM
         List<Task> renderTasks;
 
         int shouldPublishCount = 0;
-        [NonSerialized] public int renderedCount = 0;
-        [NonSerialized] public int renderRequestedCount = 0;
-        [NonSerialized] public int setShaderCount = 0;
-        [NonSerialized] public int shaderRequestedCount = 0;
-        [NonSerialized] public int shadedCount = 0;
-        [NonSerialized] public int publishedCount = 0;
+        [NonSerialized] public static int renderedCount = 0;
+        [NonSerialized] public static int renderRequestedCount = 0;
+        [NonSerialized] public static int setShaderCount = 0;
+        [NonSerialized] public static int shaderRequestedCount = 0;
+        [NonSerialized] public static int shadedCount = 0;
+        [NonSerialized] public static int publishedCount = 0;
 
         private void Awake() 
         {
@@ -66,10 +66,8 @@ namespace AWSIM
             StartCoroutine(FixedUpdateRoutine());
         }
 
-        private void Start()
+        private void OnEnable()
         {   
-            Debug.Log("Rendering Threading Mode: " + SystemInfo.renderingThreadingMode);
-
             string[] args = System.Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length; ++i)
             {
@@ -116,6 +114,17 @@ namespace AWSIM
                             }
                         }
                         break;
+
+                    case "-camera":
+                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int camera))
+                        {
+                            int removeCount = cameraSensors.Count - camera;
+                            if (removeCount > 0 && removeCount <= cameraSensors.Count)
+                            {
+                                cameraSensors.RemoveRange(cameraSensors.Count - removeCount, removeCount);
+                            }
+                        }
+                        break;
                 }
             }
         }
@@ -129,11 +138,11 @@ namespace AWSIM
 
                 // Matching output to hz.
                 var interval = 1.0f / (int)publishHz;
-                if (timer >= interval)
+                if (timer + 0.00001f >= interval)
                 {   
                     publishFlag = true;
                     shouldPublishCount += cameraSensors.Count;
-                    timer = 0f + (timer - interval);
+                    timer = 0;
                 }
             }
 
@@ -189,7 +198,7 @@ namespace AWSIM
 
         private IEnumerator FixedUpdateRoutine()
         {   
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSeconds(10);
 
             timerStart = true;
 
